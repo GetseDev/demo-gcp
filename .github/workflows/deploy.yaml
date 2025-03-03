@@ -44,6 +44,18 @@ jobs:
           docker build -t northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest frontend/
           docker push northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest
 
+      - name: 🔍 Verificar instalación de kubectl
+        run: |
+          if ! command -v kubectl &> /dev/null; then
+            echo "🚨 kubectl no está instalado en el runner. Instalándolo..."
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+            echo "✅ kubectl instalado correctamente"
+          else
+            echo "✅ kubectl ya está instalado"
+          fi
+
       - name: 🚀 Desplegar en Kubernetes
         run: |
           kubectl apply -f kubernetes/backend.yaml

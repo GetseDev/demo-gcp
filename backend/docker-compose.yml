@@ -1,0 +1,14 @@
+services:
+  db:
+    image: mysql:8.0.41-oraclelinux9
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=demo
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-v:/var/lib/mysql
+
+volumes:
+  mysql-v:

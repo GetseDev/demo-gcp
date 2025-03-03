@@ -1,36 +1,50 @@
-  name: Deploy to GKE
+name: Deploy to GKE
 
-  on:
-    push:
-      branches:
-        - main  # Ejecuta en cada push a main
+on:
+  push:
+    branches:
+      - main  # Ejecuta en cada push a main
 
-  jobs:
-    deploy:
-      runs-on: self-hosted  # Ejecuta en el bastion-host
-      steps:
-        - name: 🛠️ Clonar repositorio
-          uses: actions/checkout@v4
+jobs:
+  deploy:
+    runs-on: self-hosted  # Ejecuta en el bastion-host
+    steps:
+      - name: 🛠️ Clonar repositorio
+        uses: actions/checkout@v4
 
-        - name: 🔑 Autenticarse en GCP
-          run: |
-            echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > gcp-key.json
-            gcloud auth activate-service-account --key-file=gcp-key.json
-            gcloud config set project amiable-nova-446223-f2
-            gcloud container clusters get-credentials demo-gke --zone northamerica-northeast1-a --project amiable-nova-446223-f2
-        
+      - name: 🔑 Autenticarse en GCP
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > gcp-key.json
+          gcloud auth activate-service-account --key-file=gcp-key.json
+          gcloud config set project amiable-nova-446223-f2
+          gcloud container clusters get-credentials demo-gke --zone northamerica-northeast1-a --project amiable-nova-446223-f2
+          
+      - name: 🔍 Verificar autenticación en GCP
+        run: gcloud auth list
 
-        - name: 🏗️ Construir y subir imagen del backend
-          run: |
-            docker build -t northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/backend_demo:latest backend/
-            docker push northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/backend_demo:latest
+      - name: 🔑 Autenticarse en Artifact Registry
+        run: |
+          gcloud auth configure-docker northamerica-northeast1-docker.pkg.dev
+          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://northamerica-northeast1-docker.pkg.dev
 
-        - name: 🏗️ Construir y subir imagen del frontend
-          run: |
-            docker build -t northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest frontend/
-            docker push northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest
+      - name: 🛠️ Verificar instalación de Docker
+        run: |
+          if ! command -v docker &> /dev/null; then
+            echo "🚨 Docker no está instalado en el runner. Instálalo manualmente."
+            exit 1
+          fi
 
-        - name: 🚀 Desplegar en Kubernetes
-          run: |
-            kubectl apply -f kubernetes/backend.yaml
-            kubectl apply -f kubernetes/frontend.yaml
+      - name: 🏗️ Construir y subir imagen del backend
+        run: |
+          docker build -t northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/backend_demo:latest backend/
+          docker push northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/backend_demo:latest
+
+      - name: 🏗️ Construir y subir imagen del frontend
+        run: |
+          docker build -t northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest frontend/
+          docker push northamerica-northeast1-docker.pkg.dev/amiable-nova-446223-f2/demo-gcp/frontend_demo:latest
+
+      - name: 🚀 Desplegar en Kubernetes
+        run: |
+          kubectl apply -f kubernetes/backend.yaml
+          kubectl apply -f kubernetes/frontend.yaml

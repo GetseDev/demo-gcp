@@ -56,6 +56,9 @@ jobs:
             echo "✅ kubectl ya está instalado"
           fi
 
+      - name: ⚙️ Configurar autenticación en GKE
+        run: echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> ~/.bashrc && source ~/.bashrc
+        
       - name: 🚀 Desplegar en Kubernetes
         run: |
           kubectl apply -f backend/backend-deployment.yml
